@@ -798,8 +798,10 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     if(rev){if(ev){document.getElementById("rEvEyebrow").textContent="✡️ היום בדברי ימי חב״ד";document.getElementById("rEvTitle").textContent=ev.t||"";document.getElementById("rEvStory").textContent=ev.s||"";rev.hidden=false;}else{rev.hidden=true;}}
     var hy=hayomYomFor(now),rhy=document.getElementById("rHyy");
     if(rhy){if(hy&&hy.s){document.getElementById("rHyyDate").textContent=hebrewDate(now);document.getElementById("rHyyText").textContent=hy.s;rhy.hidden=false;}else rhy.hidden=true;}
-    var n=REBBE_PHOTOS.length,img=document.getElementById("rPhoto"),dots=document.getElementById("rDots");
-    if(img&&n){var idx=Math.floor(now.getTime()/12000)%n;if(img.getAttribute("data-i")!==String(idx)){img.src=REBBE_PHOTOS[idx];img.setAttribute("data-i",String(idx));img.classList.add("on");if(dots){if(dots.childElementCount!==n){dots.innerHTML="";for(var i=0;i<n;i++)dots.appendChild(document.createElement("i"));}for(var j=0;j<dots.children.length;j++)dots.children[j].classList.toggle("on",j===idx);}}}
+    /* גלריית התמונות ב"הכל יחד": קודם כל התמונות שהועלו (board/media), ואם אין — תמונות הרבי כגיבוי. */
+    var gal=(function(){var im=(mediaList||[]).filter(function(m){return m&&(m.type==="image"||!m.type)&&m.url;}).map(function(m){return m.url;});return im.length?im:REBBE_PHOTOS;})();
+    var n=gal.length,img=document.getElementById("rPhoto"),dots=document.getElementById("rDots");
+    if(img&&n){var idx=Math.floor(now.getTime()/12000)%n;if(img.getAttribute("data-src")!==gal[idx]){img.src=gal[idx];img.setAttribute("data-src",gal[idx]);img.classList.add("on");}if(dots){if(dots.childElementCount!==n){dots.innerHTML="";for(var i=0;i<n;i++)dots.appendChild(document.createElement("i"));}for(var j=0;j<dots.children.length;j++)dots.children[j].classList.toggle("on",j===idx);}}
   }
   function renderClock(){
     var now=new Date();
