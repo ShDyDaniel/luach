@@ -1,12 +1,11 @@
 /* לוח הקומה — Service Worker: מאפשר ללוח לעבוד גם בלי אינטרנט (תצוגה, תאריכים, זמנים, היום יום).
    השעון/התאריך/הזמנים/היום יום מחושבים במכשיר, וכל נתוני היום-יום נמצאים ב-hayomyom.js — הכל נשמר במטמון. */
-var CACHE = "luach-v17";
+var CACHE = "luach-v18";
 var CORE = [
   "./",
   "index.html",
   "hayomyom.js",
   "rebbe-1.js",
-  "rebbe-2.js",
   "rebbe-3.js",
   "rebbe-4.js",
   "rebbe-5.js",
