@@ -1222,7 +1222,7 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     };
     rtdb.ref(".info/serverTimeOffset").on("value",function(s){var off=s.val();if(typeof off==="number"){serverSkew=off;try{localStorage.setItem("board_skew",String(Math.round(off)));}catch(e){}}});
     rtdb.ref(".info/connected").on("value",function(s){setStatus(s.val()?"מחובר ומסנכרן ✓":"מתחבר…",!s.val());});
-    base.child("config").on("value",function(s){var r=s.val();if(r&&(r.updatedAt||0)>=(config.updatedAt||0)){config=Object.assign({},DEFAULTS,r);saveCache();}else if(r&&store){writeChain=writeChain.then(function(){return store.saveConfig(Object.assign({},config));}).catch(function(){});}applyTheme();syncInputs();});
+    base.child("config").on("value",function(s){var r=s.val();if(r&&(r.updatedAt||0)>=(config.updatedAt||0)){var _oldVid=config.dailyVidUrl;config=Object.assign({},DEFAULTS,r);saveCache();if(config.dailyVidUrl!==_oldVid){dailyPlayedKey=null;try{localStorage.removeItem("board_dailyvid_played");}catch(e){}}}else if(r&&store){writeChain=writeChain.then(function(){return store.saveConfig(Object.assign({},config));}).catch(function(){});}applyTheme();syncInputs();});
     base.child("msgs").on("value",function(s){var r=s.val();
       if(r&&typeof r==="object"){
         if((r.u||0)>=(msgsU||0)){msgsU=r.u||0;messages=(r.list||[]).slice();sortMsgs();saveCache();}
