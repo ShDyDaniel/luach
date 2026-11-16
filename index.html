@@ -147,6 +147,8 @@
   .rich.style-spotlight .rich-event,.rich.style-spotlight .rich-hyy{background:rgba(18,18,24,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-color:rgba(255,255,255,.15);}
   .rich.style-spotlight .rich-ev-title,.rich.style-spotlight .rich-ev-story,.rich.style-spotlight .rich-hyy-head,.rich.style-spotlight .rich-hyy-text{color:#f3f3f7;}
   .rich.style-spotlight .rich-dots{bottom:auto;top:clamp(8px,1.4vmin,16px);}
+  /* ספירה לאחור לסרטון היומי — צ'יפ עליון, מעל כל הפריסות */
+  .daily-cd{position:absolute;top:clamp(10px,2vmin,26px);left:50%;transform:translateX(-50%);z-index:9;display:flex;align-items:center;gap:.5em;background:var(--d-card-bg);border:1px solid var(--d-card-border);border-radius:999px;padding:.42em 1.2em;font-size:clamp(1rem,2.5vmin,1.7rem);font-weight:700;color:var(--d-text);font-variant-numeric:tabular-nums;box-shadow:0 8px 26px rgba(0,0,0,.4);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
   .event{display:flex;align-items:center;gap:clamp(14px,2.4vmin,28px);padding:clamp(16px,2.6vmin,30px) clamp(20px,3vmin,40px);border-radius:clamp(14px,1.8vmin,24px);border:1px solid var(--d-card-border);background:var(--d-card-bg);position:relative;overflow:hidden;}
   .event::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:6px;background:var(--d-muted);}
   .event.ev-amber::before{background:#f9ad3c;} .event.ev-indigo::before{background:#818cf8;} .event.ev-shabbat::before{background:#7fd1c4;}
@@ -346,6 +348,7 @@
     <div class="rich-hyy" id="rHyy" hidden><div class="rich-hyy-head">📖 היום יום · <span id="rHyyDate"></span></div><div class="rich-hyy-text" id="rHyyText"></div></div>
   </div>
   <div class="rebbe-bg" id="rebbeBgEl" hidden><img id="rebbeBgImg" alt=""><div class="rebbe-bg-scrim"></div></div>
+  <div class="daily-cd" id="dailyCd" hidden></div>
   <div class="screenoff" id="screenOff" title="הקש להצגת המסך לכמה דקות"></div>
   <div id="shabbat" class="shabbat" hidden>
     <img id="shPhoto" alt="">
@@ -851,6 +854,7 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     var richOn=!!config.richMode&&!onShab,rvEl=document.getElementById("richView");
     elDisplay.classList.toggle("rich-on",richOn);
     if(rvEl){rvEl.hidden=!richOn;if(richOn){rvEl.className="rich style-"+(config.richStyle||"split");renderRich(now);}}
+    var dcd=document.getElementById("dailyCd");if(dcd){var cdms=dailyCdMs(now);if(cdms!=null){dcd.textContent="🎬 הסרטון היומי בעוד "+msToMMSS(cdms);dcd.hidden=false;}else dcd.hidden=true;}
     var h=now.getHours()+now.getMinutes()/60,loD=parseHM(loForDim()),dim=false;
     if(config.nightDim&&loD&&!onShab){var loH=loD.h+loD.m/60;dim=(h>=loH)||(h<DIM_END_H);}
     elDisplay.classList.toggle("dimmed",dim);applyBrightness();
@@ -904,6 +908,16 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
   /* ===== סרטון יומי מתוזמן (30 דק' לפני כיבוי אורות) ===== */
   function dailyVidMinute(){var t=parseHM(loForDim());if(!t)return null;var off=(config.dailyVidOffsetMin==null?30:config.dailyVidOffsetMin);var tot=t.h*60+t.m-off;while(tot<0)tot+=1440;return tot%1440;}
   function dailyVidTimeStr(){var m=dailyVidMinute();return m==null?"":pad2(Math.floor(m/60))+":"+pad2(m%60);}
+  function dailyCdMs(now){
+    if(!(config.dailyVidEnabled&&config.dailyVidUrl))return null;
+    if(config.shabbatMode&&isShabbat(now))return null;
+    if(screenOffNow(now)||dailyPlaying)return null;
+    var sm=dailyVidMinute();if(sm==null)return null;
+    if(dailyPlayedKey===todayKey())return null;
+    var curMs=now.getHours()*3600000+now.getMinutes()*60000+now.getSeconds()*1000+now.getMilliseconds();
+    var diff=sm*60000-curMs;
+    return (diff>0&&diff<=15*60000)?diff:null;
+  }
   function maybeDaily(now){
     if(!(config.dailyVidEnabled&&config.dailyVidUrl))return false;
     if(config.shabbatMode&&isShabbat(now))return false;
