@@ -935,10 +935,17 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     var ms=$("mediaShow"),st=$("mediaStage");if(!ms||!st)return;
     dailyPlaying=true;if(mediaActive)stopMedia();
     ms.classList.add("on");stopStageVideos();st.innerHTML="";clearMediaTimer();
-    var v=document.createElement("video");v.src=cldWeb(config.dailyVidUrl);v.autoplay=true;v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";
-    v.onended=function(){endDaily(tkey);};v.onerror=function(){endDaily(tkey);};
-    st.appendChild(v);
-    var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){endDaily(tkey);});});
+    var v=document.createElement("video");v.src=cldWeb(config.dailyVidUrl);v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";
+    if(isPreview){v.muted=true;v.setAttribute("muted","");} // בתצוגה מקדימה תמיד שקט — הקול רק מהטלוויזיה (למנוע שמע כפול)
+    var done=false,watch=null;
+    function finish(){if(done)return;done=true;if(watch){clearTimeout(watch);watch=null;}endDaily(tkey);}
+    function arm(ms){if(watch)clearTimeout(watch);watch=setTimeout(function(){finish();},ms);} // אם נתקע (מסך שחור) — חוזרים ללוח במקום להיתקע
+    v.onended=finish;v.onerror=finish;
+    v.onplaying=function(){arm(15000);};
+    v.ontimeupdate=function(){if(!done)arm(15000);}; // כל התקדמות מאריכה; עצירה של 15ש' ללא התקדמות = סיום
+    v.onstalled=function(){arm(15000);};v.onwaiting=function(){arm(15000);};
+    st.appendChild(v);arm(15000); // אם לא התחיל לנגן כלל תוך 15ש' — לוותר
+    var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){finish();});});
   }
   function endDaily(tkey){dailyPlaying=false;if(tkey){dailyPlayedKey=tkey;try{localStorage.setItem("board_dailyvid_played",tkey);}catch(e){}}var ms=$("mediaShow"),st=$("mediaStage");if(st){stopStageVideos();st.innerHTML="";}if(ms)ms.classList.remove("on");mediaCurKey="";}
   /* ===== שידור חי / יוטיוב (שכבה מלאת-מסך מעל הכול) ===== */

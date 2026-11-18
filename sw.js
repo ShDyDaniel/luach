@@ -1,6 +1,6 @@
 /* לוח הקומה — Service Worker: מאפשר ללוח לעבוד גם בלי אינטרנט (תצוגה, תאריכים, זמנים, היום יום).
    השעון/התאריך/הזמנים/היום יום מחושבים במכשיר, וכל נתוני היום-יום נמצאים ב-hayomyom.js — הכל נשמר במטמון. */
-var CACHE = "luach-v24";
+var CACHE = "luach-v25";
 var CORE = [
   "./",
   "index.html",
@@ -30,6 +30,9 @@ self.addEventListener("fetch", function(e){
   try { url = new URL(req.url); } catch(_) { return; }
   // אל תיגע בתעבורת Firebase בזמן אמת — תמיד רשת ישירה
   if(url.hostname.indexOf("firebaseio.com") >= 0) return;
+  // וידאו: ישר לרשת, בלי SW. וידאו נטען בבקשות טווח (Range/206) — SW ששומר/מגיש אותו
+  // שובר את ההזרמה והדילוג (מתנגן כמה שניות ואז מסך שחור ונתקע). גם בקשת-טווח מפורשת עוקפת.
+  if(req.headers.get("range") || url.pathname.indexOf("/video/") >= 0 || /\.(mp4|webm|mov|m4v|ogg)(\?|$)/i.test(url.pathname)) return;
   var isApp = (url.origin === location.origin);
   var isFont = (url.hostname.indexOf("fonts.googleapis.com") >= 0 || url.hostname.indexOf("fonts.gstatic.com") >= 0);
   var isFbSdk = (url.hostname === "www.gstatic.com" && url.pathname.indexOf("/firebasejs/") >= 0);
