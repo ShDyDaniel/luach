@@ -871,7 +871,9 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
   function mediaEligible(now){var onShab=config.shabbatMode&&isShabbat(now);return config.mediaMode&&config.mediaMode!=="off"&&mediaList.length>0&&!onShab&&!screenOffNow(now);}
   function mediaStateKey(){return config.mediaMode+"|"+(config.mediaDwell||8)+"|"+mediaList.map(function(m){return m.id;}).join(",");}
   function clearMediaTimer(){if(mediaTimer){clearTimeout(mediaTimer);mediaTimer=null;}}
-  function stopMedia(){clearMediaTimer();mediaActive=false;mediaCurKey="";var st=$("mediaStage");if(st)st.innerHTML="";var ms=$("mediaShow");if(ms)ms.classList.remove("on");}
+  /* עוצר ומנתק כל וידאו בבמה לפני ניקוי — מונע "שמע יתום" שממשיך לנגן ברקע אחרי מעבר לפריט הבא */
+  function stopStageVideos(){var st=$("mediaStage");if(!st)return;var vs=st.getElementsByTagName("video");for(var i=vs.length-1;i>=0;i--){try{vs[i].pause();vs[i].muted=true;vs[i].removeAttribute("src");vs[i].load();}catch(e){}}}
+  function stopMedia(){clearMediaTimer();mediaActive=false;mediaCurKey="";var st=$("mediaStage");if(st){stopStageVideos();st.innerHTML="";}var ms=$("mediaShow");if(ms)ms.classList.remove("on");}
   function startMedia(){var ms=$("mediaShow");if(!ms)return;mediaActive=true;ms.classList.add("on");mediaIdx=0;showMediaItem();}
   function mediaAdvance(){if(!mediaList.length){stopMedia();return;}mediaIdx=(mediaIdx+1)%mediaList.length;showMediaItem();}
   function showMediaItem(){
@@ -879,7 +881,7 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     if(!mediaList.length){stopMedia();return;}
     if(mediaIdx>=mediaList.length)mediaIdx=0;
     var it=mediaList[mediaIdx],single=(config.mediaMode==="single");
-    st.innerHTML="";clearMediaTimer();
+    stopStageVideos();st.innerHTML="";clearMediaTimer();
     if(it.type==="youtube"){
       var fr=document.createElement("iframe");
       var sp="autoplay=1&mute=1&controls=0&rel=0&playsinline=1&modestbranding=1&iv_load_policy=3"+(single?("&loop=1&playlist="+encodeURIComponent(it.url)):"");
@@ -889,7 +891,7 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
       st.appendChild(fr);
       if(!single){var ys=Math.max(10,config.mediaVideoSecs||60);mediaTimer=setTimeout(mediaAdvance,ys*1000);}
     }else if(it.type==="video"){
-      var v=document.createElement("video");v.src=cldWeb(it.url);v.autoplay=true;v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";v.loop=single;
+      var v=document.createElement("video");v.src=cldWeb(it.url);v.autoplay=true;v.muted=true;v.setAttribute("muted","");v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";v.loop=single;
       v.onended=function(){if(!single)mediaAdvance();};
       v.onerror=function(){mediaTimer=setTimeout(mediaAdvance,2000);};
       st.appendChild(v);
@@ -932,13 +934,13 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
   function startDaily(tkey){
     var ms=$("mediaShow"),st=$("mediaStage");if(!ms||!st)return;
     dailyPlaying=true;if(mediaActive)stopMedia();
-    ms.classList.add("on");st.innerHTML="";clearMediaTimer();
+    ms.classList.add("on");stopStageVideos();st.innerHTML="";clearMediaTimer();
     var v=document.createElement("video");v.src=cldWeb(config.dailyVidUrl);v.autoplay=true;v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";
     v.onended=function(){endDaily(tkey);};v.onerror=function(){endDaily(tkey);};
     st.appendChild(v);
     var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){endDaily(tkey);});});
   }
-  function endDaily(tkey){dailyPlaying=false;if(tkey){dailyPlayedKey=tkey;try{localStorage.setItem("board_dailyvid_played",tkey);}catch(e){}}var ms=$("mediaShow"),st=$("mediaStage");if(st)st.innerHTML="";if(ms)ms.classList.remove("on");mediaCurKey="";}
+  function endDaily(tkey){dailyPlaying=false;if(tkey){dailyPlayedKey=tkey;try{localStorage.setItem("board_dailyvid_played",tkey);}catch(e){}}var ms=$("mediaShow"),st=$("mediaStage");if(st){stopStageVideos();st.innerHTML="";}if(ms)ms.classList.remove("on");mediaCurKey="";}
   /* ===== שידור חי / יוטיוב (שכבה מלאת-מסך מעל הכול) ===== */
   function parseBroadcast(u){
     u=(u||"").trim();if(!u)return null;
