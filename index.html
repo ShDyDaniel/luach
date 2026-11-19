@@ -866,7 +866,7 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     if(now.getHours()===4&&now.getMinutes()===0&&now.toDateString()!==startDay)location.reload();
   }
   /* ===== מדיה: תמונות וסרטונים (שכבה מלאת-מסך, בודד או בסבב) ===== */
-  var mediaIdx=0,mediaTimer=null,mediaActive=false,mediaCurKey="";
+  var mediaIdx=0,mediaTimer=null,mediaActive=false,mediaCurKey="",mediaSeq=0;
   function saveMedia(){mediaU=nowSync();saveCache();renderAdminMedia();if(store&&store.saveMedia){var snap={u:mediaU,list:mediaList.slice()};writeChain=writeChain.then(function(){return store.saveMedia(snap);}).catch(function(){});}}
   function mediaEligible(now){var onShab=config.shabbatMode&&isShabbat(now);return config.mediaMode&&config.mediaMode!=="off"&&mediaList.length>0&&!onShab&&!screenOffNow(now);}
   function mediaStateKey(){return config.mediaMode+"|"+(config.mediaDwell||8)+"|"+mediaList.map(function(m){return m.id;}).join(",");}
@@ -880,25 +880,34 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
     var st=$("mediaStage");if(!st)return;
     if(!mediaList.length){stopMedia();return;}
     if(mediaIdx>=mediaList.length)mediaIdx=0;
-    var it=mediaList[mediaIdx],single=(config.mediaMode==="single");
-    stopStageVideos();st.innerHTML="";clearMediaTimer();
-    if(it.type==="youtube"){
-      var fr=document.createElement("iframe");
-      var sp="autoplay=1&mute=1&controls=0&rel=0&playsinline=1&modestbranding=1&iv_load_policy=3"+(single?("&loop=1&playlist="+encodeURIComponent(it.url)):"");
-      fr.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(it.url)+"?"+sp;
-      fr.setAttribute("allow","autoplay; encrypted-media; picture-in-picture");fr.setAttribute("frameborder","0");fr.allowFullscreen=true;
-      fr.style.cssText="position:absolute;inset:0;width:100%;height:100%;border:0";
-      st.appendChild(fr);
-      if(!single){var ys=Math.max(10,config.mediaVideoSecs||60);mediaTimer=setTimeout(mediaAdvance,ys*1000);}
-    }else if(it.type==="video"){
-      var v=document.createElement("video");v.src=cldWeb(it.url);v.autoplay=true;v.muted=true;v.setAttribute("muted","");v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";v.loop=single;
-      v.onended=function(){if(!single)mediaAdvance();};
-      v.onerror=function(){mediaTimer=setTimeout(mediaAdvance,2000);};
-      st.appendChild(v);
-      var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){mediaTimer=setTimeout(mediaAdvance,2000);});});
+    var it=mediaList[mediaIdx],single=(config.mediaMode==="single"),mySeq=++mediaSeq;
+    clearMediaTimer();
+    if(it.type==="video"){
+      // בונים את הווידאו מחוץ לבמה ומחליפים רק כשהוא מוכן לנגן — כך הפריט הקודם נשאר על המסך
+      // בזמן הטעינה ואין "מסך שחור" של כמה שניות לפני שהווידאו מתחיל.
+      var v=document.createElement("video");v.src=cldWeb(it.url);v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";v.loop=single;
+      if(isPreview){v.muted=true;v.setAttribute("muted","");} // רק בתצוגה מקדימה שקט — הקול יוצא רק מהטלוויזיה
+      var swapped=false;
+      function showV(){if(swapped||mySeq!==mediaSeq)return;swapped=true;stopStageVideos();st.innerHTML="";st.appendChild(v);var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){mediaTimer=setTimeout(mediaAdvance,2000);});});}
+      v.oncanplay=showV;v.onloadeddata=showV;
+      v.onended=function(){if(mySeq===mediaSeq&&!single)mediaAdvance();}; // מתנגן עד הסוף ואז לפריט הבא — בלי הגבלת-זמן
+      v.onerror=function(){if(mySeq===mediaSeq)mediaTimer=setTimeout(mediaAdvance,2000);};
+      setTimeout(showV,8000); // גיבוי: אם canplay לא נורה בכלל
+      v.load();
     }else{
-      var img=document.createElement("img");img.alt="";img.onerror=function(){mediaTimer=setTimeout(mediaAdvance,2000);};img.src=cldWeb(it.url);st.appendChild(img);
-      if(!single){var secs=Math.max(3,config.mediaDwell||8);mediaTimer=setTimeout(mediaAdvance,secs*1000);}
+      stopStageVideos();st.innerHTML="";
+      if(it.type==="youtube"){
+        var fr=document.createElement("iframe");
+        var sp="autoplay=1&mute=1&controls=0&rel=0&playsinline=1&modestbranding=1&iv_load_policy=3"+(single?("&loop=1&playlist="+encodeURIComponent(it.url)):"");
+        fr.src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(it.url)+"?"+sp;
+        fr.setAttribute("allow","autoplay; encrypted-media; picture-in-picture");fr.setAttribute("frameborder","0");fr.allowFullscreen=true;
+        fr.style.cssText="position:absolute;inset:0;width:100%;height:100%;border:0";
+        st.appendChild(fr);
+        if(!single){var ys=Math.max(10,config.mediaVideoSecs||60);mediaTimer=setTimeout(mediaAdvance,ys*1000);}
+      }else{
+        var img=document.createElement("img");img.alt="";img.onerror=function(){mediaTimer=setTimeout(mediaAdvance,2000);};img.src=cldWeb(it.url);st.appendChild(img);
+        if(!single){var secs=Math.max(3,config.mediaDwell||8);mediaTimer=setTimeout(mediaAdvance,secs*1000);}
+      }
     }
   }
   function syncMedia(now){
@@ -933,19 +942,25 @@ var MEDIA_UPLOAD = { cloud: "ri3ldqxm", preset: "luach770" };
   }
   function startDaily(tkey){
     var ms=$("mediaShow"),st=$("mediaStage");if(!ms||!st)return;
-    dailyPlaying=true;if(mediaActive)stopMedia();
-    ms.classList.add("on");stopStageVideos();st.innerHTML="";clearMediaTimer();
+    dailyPlaying=true;if(mediaActive)stopMedia();clearMediaTimer();
     var v=document.createElement("video");v.src=cldWeb(config.dailyVidUrl);v.playsInline=true;v.setAttribute("playsinline","");v.controls=false;v.preload="auto";
     if(isPreview){v.muted=true;v.setAttribute("muted","");} // בתצוגה מקדימה תמיד שקט — הקול רק מהטלוויזיה (למנוע שמע כפול)
-    var done=false,watch=null;
+    var done=false,watch=null,shown=false;
     function finish(){if(done)return;done=true;if(watch){clearTimeout(watch);watch=null;}endDaily(tkey);}
-    function arm(ms){if(watch)clearTimeout(watch);watch=setTimeout(function(){finish();},ms);} // אם נתקע (מסך שחור) — חוזרים ללוח במקום להיתקע
+    function arm(t){if(watch)clearTimeout(watch);watch=setTimeout(function(){finish();},t);} // אם נתקע — חוזרים ללוח במקום להיתקע (לא חותך ניגון תקין, כי כל התקדמות מאריכה)
+    function reveal(){ // מציגים את שכבת-הווידאו רק כשהוא מוכן לנגן — כך הלוח נשאר על המסך עד הרגע האחרון, בלי מסך שחור
+      if(shown||done)return;shown=true;
+      stopStageVideos();st.innerHTML="";st.appendChild(v);ms.classList.add("on");
+      arm(15000);
+      var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){finish();});});
+    }
     v.onended=finish;v.onerror=finish;
+    v.oncanplay=reveal;v.onloadeddata=reveal;
     v.onplaying=function(){arm(15000);};
     v.ontimeupdate=function(){if(!done)arm(15000);}; // כל התקדמות מאריכה; עצירה של 15ש' ללא התקדמות = סיום
     v.onstalled=function(){arm(15000);};v.onwaiting=function(){arm(15000);};
-    st.appendChild(v);arm(15000); // אם לא התחיל לנגן כלל תוך 15ש' — לוותר
-    var p=v.play();if(p&&p.catch)p.catch(function(){v.muted=true;v.play().catch(function(){finish();});});
+    setTimeout(function(){if(!shown&&!done)reveal();},10000); // גיבוי: אם canplay לא נורה — מציגים בכל זאת
+    v.load();
   }
   function endDaily(tkey){dailyPlaying=false;if(tkey){dailyPlayedKey=tkey;try{localStorage.setItem("board_dailyvid_played",tkey);}catch(e){}}var ms=$("mediaShow"),st=$("mediaStage");if(st){stopStageVideos();st.innerHTML="";}if(ms)ms.classList.remove("on");mediaCurKey="";}
   /* ===== שידור חי / יוטיוב (שכבה מלאת-מסך מעל הכול) ===== */
