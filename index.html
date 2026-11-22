@@ -1261,7 +1261,37 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
   }
   function setStatus(txt,off){if(mode!=="manage")return;var s=$("syncStatus"),gs=$("gateStatus");if(s){s.textContent=txt;s.className="c-status"+(off?" off":"");}if(off&&gs){gs.hidden=false;gs.textContent=txt;}}
 
+  /* עדכונים שמגיעים מ-Firebase או מהשרת המקומי — אותו טיפול, השינוי האחרון גובר */
+  function onConfigVal(r){if(r&&(r.updatedAt||0)>=(config.updatedAt||0)){var _oldVid=config.dailyVidUrl;config=Object.assign({},DEFAULTS,r);saveCache();if(config.dailyVidUrl!==_oldVid){dailyPlayedKey=null;try{localStorage.removeItem("board_dailyvid_played");}catch(e){}}}else if(r&&store){writeChain=writeChain.then(function(){return store.saveConfig(Object.assign({},config));}).catch(function(){});}applyTheme();syncInputs();}
+  function onMsgsVal(r){if(!r||typeof r!=="object")return;
+    if((r.u||0)>=(msgsU||0)){msgsU=r.u||0;messages=(r.list||[]).slice();sortMsgs();saveCache();}
+    else if(store){var snap={u:msgsU,list:messages.slice()};writeChain=writeChain.then(function(){return store.saveMsgs(snap);}).catch(function(){});}
+    renderMessages();renderAdminMessages();}
+  function onMediaVal(r){if(!r||typeof r!=="object")return;
+    if((r.u||0)>=(mediaU||0)){mediaU=r.u||0;mediaList=(r.list||[]).slice();saveCache();}
+    else if(store){var snap={u:mediaU,list:mediaList.slice()};writeChain=writeChain.then(function(){return store.saveMedia(snap);}).catch(function(){});}
+    renderAdminMedia();}
+  /* מצב מקומי: הדף הוגש מהמחשב של המסך (luach-local.js) — עובד גם בלי אינטרנט */
+  function initLocalStore(){
+    function post(p,o){return fetch("/api/"+p,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(o)}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);});}
+    store={saveConfig:function(o){return post("board/config",o);},saveMsgs:function(o){return post("board/msgs",o);},saveMedia:function(o){return post("board/media",o);}};
+    var cloudOn=false,linked=false;
+    function status(){setStatus(linked?"מחובר למחשב הלוח ✓ · "+(cloudOn?"מסונכרן לענן":"בלי אינטרנט — יסונכרן כשיחזור"):"מתחבר למחשב הלוח…",!linked);}
+    var es=new EventSource("/api/stream");
+    es.onopen=function(){linked=true;status();};
+    es.onerror=function(){linked=false;status();};
+    es.onmessage=function(e){var m;try{m=JSON.parse(e.data);}catch(_){return;}
+      if(typeof m.t==="number"){serverSkew=m.t-Date.now();}
+      if(m.k==="config"){if(m.v)onConfigVal(m.v);else{applyTheme();syncInputs();}}
+      else if(m.k==="msgs")onMsgsVal(m.v);
+      else if(m.k==="media")onMediaVal(m.v);
+      else if(m.k==="status"){lastScreen=m.v;renderScreenStatus();}
+      else if(m.k==="cloud"){cloudOn=!!(m.v&&m.v.online);status();}};
+    if(mode==="display"&&!isPreview){var beat=function(){post("status",{}).catch(function(){});};beat();setInterval(beat,20000);}
+    else setInterval(renderScreenStatus,5000);
+  }
   function initStore(){
+    if(window.LUACH_LOCAL){initLocalStore();return;}
     if(!window.firebase||!firebaseConfig.databaseURL||String(firebaseConfig.databaseURL).indexOf("PASTE")>-1){setStatus("⚠ Firebase עדיין לא הוגדר (ערוך את firebaseConfig בקובץ).",true);return;}
     if(String(firebaseConfig.apiKey||"").indexOf("PASTE")>-1)delete firebaseConfig.apiKey;
     try{firebase.initializeApp(firebaseConfig);}catch(e){}
@@ -1274,23 +1304,14 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
     };
     rtdb.ref(".info/serverTimeOffset").on("value",function(s){var off=s.val();if(typeof off==="number"){serverSkew=off;try{localStorage.setItem("board_skew",String(Math.round(off)));}catch(e){}}});
     rtdb.ref(".info/connected").on("value",function(s){setStatus(s.val()?"מחובר ומסנכרן ✓":"מתחבר…",!s.val());});
-    base.child("config").on("value",function(s){var r=s.val();if(r&&(r.updatedAt||0)>=(config.updatedAt||0)){var _oldVid=config.dailyVidUrl;config=Object.assign({},DEFAULTS,r);saveCache();if(config.dailyVidUrl!==_oldVid){dailyPlayedKey=null;try{localStorage.removeItem("board_dailyvid_played");}catch(e){}}}else if(r&&store){writeChain=writeChain.then(function(){return store.saveConfig(Object.assign({},config));}).catch(function(){});}applyTheme();syncInputs();});
+    base.child("config").on("value",function(s){onConfigVal(s.val());});
     base.child("msgs").on("value",function(s){var r=s.val();
-      if(r&&typeof r==="object"){
-        if((r.u||0)>=(msgsU||0)){msgsU=r.u||0;messages=(r.list||[]).slice();sortMsgs();saveCache();}
-        else if(store){var snap={u:msgsU,list:messages.slice()};writeChain=writeChain.then(function(){return store.saveMsgs(snap);}).catch(function(){});}
-        renderMessages();renderAdminMessages();
-      } else {
+      if(r&&typeof r==="object")onMsgsVal(r);
+      else {
         base.child("messages").once("value",function(os){var v=os.val()||{};var list=Object.keys(v).map(function(k){var m=v[k]||{};return{id:k,text:m.text||"",createdAt:m.createdAt||0,expiresAt:m.expiresAt||0};});list.sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0);});messages=list;msgsU=nowSync();saveCache();if(store){store.saveMsgs({u:msgsU,list:messages.slice()});base.child("messages").remove();}renderMessages();renderAdminMessages();});
       }
     });
-    base.child("media").on("value",function(s){var r=s.val();
-      if(r&&typeof r==="object"){
-        if((r.u||0)>=(mediaU||0)){mediaU=r.u||0;mediaList=(r.list||[]).slice();saveCache();}
-        else if(store){var snap={u:mediaU,list:mediaList.slice()};writeChain=writeChain.then(function(){return store.saveMedia(snap);}).catch(function(){});}
-        renderAdminMedia();
-      }
-    });
+    base.child("media").on("value",function(s){onMediaVal(s.val());});
     if(mode==="display"&&!isPreview){
       var st=base.child("status/display");
       rtdb.ref(".info/connected").on("value",function(s){if(s.val()){st.onDisconnect().set({online:false,ts:firebase.database.ServerValue.TIMESTAMP});st.set({online:true,ts:firebase.database.ServerValue.TIMESTAMP});}});

@@ -1,0 +1,4 @@
+local/state.json
+local/state.json.tmp
+local/server.log
+.claude/
