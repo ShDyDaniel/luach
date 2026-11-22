@@ -76,8 +76,9 @@ function serveFile(req, res, pathname) {
   try { rel = decodeURIComponent(pathname); } catch { return json(res, 400, {}); }
   if (rel === '/') rel = '/index.html';
   const file = path.resolve(ROOT, '.' + rel);
-  const top = path.relative(ROOT, file).split(path.sep)[0];
-  if (!file.startsWith(ROOT + path.sep) || top === 'local' || top.startsWith('.')) return json(res, 404, {});
+  const parts = path.relative(ROOT, file).split(path.sep);
+  const privateFile = parts[0] === 'local' && /^(state\.json|server\.log)/.test(parts[1] || '');
+  if (!file.startsWith(ROOT + path.sep) || parts.some((p) => p.startsWith('.')) || privateFile) return json(res, 404, {});
   fs.readFile(file, (err, data) => {
     if (err) return json(res, 404, {});
     const headers = { 'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' };

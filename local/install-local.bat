@@ -45,4 +45,4 @@ echo   ^(או נתב קטן^), חבר את האייפון לרשת הזו, ופ�
 echo.
 echo   כבה והדלק את המחשב כדי שהכול יעלה מחדש.
 echo.
-pause
+if not defined LUACH_SELF pause

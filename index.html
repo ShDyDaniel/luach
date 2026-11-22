@@ -495,6 +495,10 @@
       <!-- ===== מידע ===== -->
       <div class="tabpage" data-page="info">
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(255,59,48,.16)">📅</span><span>לוח אירועים חב״די</span></div><div class="c-group"><div id="upcoming" style="padding:14px 16px"></div></div></div>
+        <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(52,199,89,.16)">💻</span><span>מחשב המסך · עבודה בלי אינטרנט</span></div><div class="c-group">
+          <a class="c-row tap" href="local/luach-setup.bat" download="luach-setup.bat" style="text-decoration:none;color:inherit;"><span class="lbl">⬇ התקנה במחשב המסך<small>פותחים את הדף הזה במחשב של המסך, מורידים, לוחצים פעמיים ומאשרים "כן". צריך אינטרנט רק בזמן ההתקנה.</small></span><span class="chev">↓</span></a>
+          <div class="c-row" id="lanRow" hidden><span class="lbl">כתובת לאייפון<small>מחברים את האייפון ל-Wi-Fi של המחשב ופותחים בספארי:</small><small id="lanAddr" dir="ltr" style="text-align:left;user-select:all;color:var(--c-text);font-weight:600"></small></span></div>
+        </div></div>
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(0,122,255,.16)">ℹ️</span><span>אודות</span></div>
           <div class="about">
             <img class="ab-ico" src="apple-touch-icon.png" alt="">
@@ -1287,6 +1291,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
       else if(m.k==="media")onMediaVal(m.v);
       else if(m.k==="status"){lastScreen=m.v;renderScreenStatus();}
       else if(m.k==="cloud"){cloudOn=!!(m.v&&m.v.online);status();}};
+    if(mode==="manage")fetch("/api/info").then(function(r){return r.json();}).then(function(i){var a=(i.addresses||[]).sort(function(x,y){return (y.indexOf("192.168.137.")===0)-(x.indexOf("192.168.137.")===0);});if(!a.length)return;$("lanAddr").innerText=a.map(function(x){return "http://"+x+":"+i.port+"/#manage";}).join("\n");$("lanRow").hidden=false;}).catch(function(){});
     if(mode==="display"&&!isPreview){var beat=function(){post("status",{}).catch(function(){});};beat();setInterval(beat,20000);}
     else setInterval(renderScreenStatus,5000);
   }
