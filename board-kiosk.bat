@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 rem ===== לוח הקומה — שומר מסך מלא (watchdog) =====
-set "URL=https://asherw770-commits.github.io/luach/"
+set "URL=https://shdydaniel.github.io/luach/"
 set "DIR=C:\luach"
 set "PROFILE=%DIR%\chrome-profile"
 set "FLAGS=--kiosk --start-fullscreen --user-data-dir=%PROFILE% --no-first-run --no-default-browser-check --disable-infobars --disable-session-crashed-bubble --hide-crash-restore-bubble --disable-features=TranslateUI --autoplay-policy=no-user-gesture-required --overscroll-history-navigation=0 --noerrdialogs --disable-pinch --disable-component-update --check-for-update-interval=604800 --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
@@ -17,7 +17,7 @@ set /a NETTRY=0
 :netwait
 if exist "%DIR%\STOP.flag" goto end
 set "NETOK=0"
-for /f %%i in ('powershell -NoProfile -Command "$c=New-Object Net.Sockets.TcpClient;try{[void]$c.ConnectAsync('asherw770-commits.github.io',443).Wait(2500);if($c.Connected){'1'}else{'0'}}catch{'0'}finally{$c.Close()}"') do set "NETOK=%%i"
+for /f %%i in ('powershell -NoProfile -Command "$c=New-Object Net.Sockets.TcpClient;try{[void]$c.ConnectAsync('github.com',443).Wait(2500);if($c.Connected){'1'}else{'0'}}catch{'0'}finally{$c.Close()}"') do set "NETOK=%%i"
 if "%NETOK%"=="1" goto netok
 set /a NETTRY+=1
 if %NETTRY% geq 20 goto netok
