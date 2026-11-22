@@ -451,6 +451,11 @@
           <div class="c-row"><span class="lbl">להציג ספירה לאחור</span><label class="sw"><input type="checkbox" id="pdEnabled"><span class="track"></span><span class="knob"></span></label></div>
           <div class="c-row"><span class="lbl">הפקדת ערב<small>תמיד 10 דק׳ לפני כיבוי אורות</small></span><label class="sw"><input type="checkbox" id="pdEveningEnabled"><span class="track"></span><span class="knob"></span></label></div>
         </div></div>
+        <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(255,159,10,.16)">🔒</span><span>נעילת פנימייה</span></div><div class="c-group">
+          <div class="c-row"><span class="lbl">להציג ספירה לאחור<small>10 דק׳ לפני · לא בשישי ושבת</small></span><label class="sw"><input type="checkbox" id="lkEnabled"><span class="track"></span><span class="knob"></span></label></div>
+          <div class="c-row"><span class="lbl">נעילת בוקר<small>ריק = בלי נעילה בבוקר</small></span><input id="lkMorning" type="time"></div>
+          <div class="c-row"><span class="lbl">נעילת צהריים<small>ריק = בלי נעילה בצהריים</small></span><input id="lkNoon" type="time"></div>
+        </div></div>
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(48,176,199,.18)">🌅</span><span>סוף זמן ק״ש</span></div><div class="c-group">
           <div class="c-row"><span class="lbl">מחושב להיום (בעל התניא)<small>כיול להתאמה ללוח כולל חב״ד</small></span><span class="val"><b id="ksFinal">—</b></span></div>
           <div class="c-row"><span class="lbl">כיול בדקות</span><div class="stepper"><button id="ksMinus">−</button><span class="sval" id="ksOffVal">0</span><button id="ksPlus">+</button></div></div>
@@ -748,7 +753,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
   function lockEv(now,hm){var t=parseHM(hm);if(!t)return null;var T=atToday(now,t.h,t.m).getTime(),n=now.getTime();
     if(n>=T-PHONE_LEAD_MIN*60000&&n<T)return{cls:"ev-amber",icon:"🔒",label:"הפנימייה ננעלת בעוד",value:msToMMSS(T-n),sub:"בשעה "+hm,urgent:true};
     if(n>=T&&n<T+2*60000)return{cls:"ev-amber",icon:"🔒",label:"",value:"הפנימייה ננעלה",sub:"",urgent:true};return null;}
-  function lockNow(now){return config.lockEnabled?(lockEv(now,config.lockMorning)||lockEv(now,config.lockNoon)):null;}
+  function lockNow(now){var w=now.getDay();return config.lockEnabled&&w!==5&&w!==6?(lockEv(now,config.lockMorning)||lockEv(now,config.lockNoon)):null;}
   function computeEvent(now){
     if(config.shabbatMode&&isShabbat(now))return{cls:"ev-shabbat",icon:"🕯️",label:"",value:"גוט שבת",sub:"",urgent:false};
     var nowMs=now.getTime();
@@ -1132,6 +1137,8 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
     var pdTime=$("pdTime");
     pdTime.addEventListener("change",function(){if(!parseHM(pdTime.value))return;config.phoneDepositTime=pdTime.value;saveConfig().then(function(){toast();});});
     $("pdEnabled").addEventListener("change",function(){config.phoneDepositEnabled=$("pdEnabled").checked;saveConfig().then(function(){toast();});});
+    $("lkEnabled").addEventListener("change",function(){config.lockEnabled=$("lkEnabled").checked;saveConfig().then(function(){toast();});});
+    [["lkMorning","lockMorning"],["lkNoon","lockNoon"]].forEach(function(p){var el=$(p[0]);el.addEventListener("change",function(){if(el.value&&!parseHM(el.value))return;config[p[1]]=el.value;saveConfig().then(function(){toast();});});});
     $("pdEveningEnabled").addEventListener("change",function(){config.phoneEveningEnabled=$("pdEveningEnabled").checked;saveConfig().then(function(){toast();});});
     function bumpKs(d){config.ksOffsetMin=Math.max(-30,Math.min(30,(config.ksOffsetMin||0)+d));refreshKs();saveConfig().then(function(){toast();});}
     $("ksMinus").addEventListener("click",function(){bumpKs(-1);});$("ksPlus").addEventListener("click",function(){bumpKs(1);});
@@ -1187,7 +1194,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
     var loTime=$("loTime");if(document.activeElement!==loTime)loTime.value=effectiveLightsOut()||config.lightsOutDefault;
     $("loEnabled").checked=!!config.lightsOutEnabled;
     var pdTime=$("pdTime");if(document.activeElement!==pdTime)pdTime.value=config.phoneDepositTime;
-    $("pdEnabled").checked=!!config.phoneDepositEnabled;$("pdEveningEnabled").checked=!!config.phoneEveningEnabled;$("ksShow").checked=!!config.ksShow;$("shabbatMode").checked=!!config.shabbatMode;$("nightDim").checked=!!config.nightDim;$("scEnabled").checked=!!config.screenOffEnabled;var _scs=$("scStart");if(_scs&&document.activeElement!==_scs)_scs.value=config.screenOffStart||"01:00";var _sce=$("scEnd");if(_sce&&document.activeElement!==_sce)_sce.value=config.screenOffEnd||"06:00";updateMediaUI();var _de=$("dailyEnabled");if(_de)_de.checked=!!config.dailyVidEnabled;var _do=$("displayOff");if(_do)_do.checked=!!config.displayOff;var _rm=$("richMode");if(_rm)_rm.checked=!!config.richMode;if(window._updWake)window._updWake();updateRebbeUI();updateBroadcastUI();if(window._joyFromCfg)window._joyFromCfg();renderDailyUI();var _hm=config.hyyMode||"rotate";var _hc=$("hyyChips");if(_hc)Array.prototype.forEach.call(_hc.children,function(b){b.classList.toggle("on",b.getAttribute("data-hyy")===_hm);});
+    $("pdEnabled").checked=!!config.phoneDepositEnabled;$("lkEnabled").checked=!!config.lockEnabled;[["lkMorning","lockMorning"],["lkNoon","lockNoon"]].forEach(function(p){var el=$(p[0]);if(document.activeElement!==el)el.value=config[p[1]]||"";});$("pdEveningEnabled").checked=!!config.phoneEveningEnabled;$("ksShow").checked=!!config.ksShow;$("shabbatMode").checked=!!config.shabbatMode;$("nightDim").checked=!!config.nightDim;$("scEnabled").checked=!!config.screenOffEnabled;var _scs=$("scStart");if(_scs&&document.activeElement!==_scs)_scs.value=config.screenOffStart||"01:00";var _sce=$("scEnd");if(_sce&&document.activeElement!==_sce)_sce.value=config.screenOffEnd||"06:00";updateMediaUI();var _de=$("dailyEnabled");if(_de)_de.checked=!!config.dailyVidEnabled;var _do=$("displayOff");if(_do)_do.checked=!!config.displayOff;var _rm=$("richMode");if(_rm)_rm.checked=!!config.richMode;if(window._updWake)window._updWake();updateRebbeUI();updateBroadcastUI();if(window._joyFromCfg)window._joyFromCfg();renderDailyUI();var _hm=config.hyyMode||"rotate";var _hc=$("hyyChips");if(_hc)Array.prototype.forEach.call(_hc.children,function(b){b.classList.toggle("on",b.getAttribute("data-hyy")===_hm);});
     $("loDefault").textContent=config.lightsOutDefault;applyTheme();refreshKs();renderAdminMessages();updateBrightUI();
   }
   function renderAdminMessages(){
