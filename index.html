@@ -771,7 +771,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
       if(nowMs>=eT&&nowMs<eT+2*60000)return{cls:"ev-amber",icon:"📱",label:"",value:"הגיע זמן הפקדת הטלפונים",sub:"",urgent:true};}}}
     var lo=effectiveLightsOut(),lx=loExt();if(lo){var lt=parseHM(lo);if(lt){var lT=atToday(now,lt.h,lt.m).getTime(),lInfo=atToday(now,LO_INFO_FROM_H,0).getTime(),lLead=lT-LO_LEAD_MIN*60000;
       if(nowMs>=lLead&&nowMs<lT)return{cls:"ev-indigo",icon:"🌙",label:"כיבוי אורות בעוד",value:msToMMSS(lT-nowMs),sub:"בשעה "+lo,urgent:true};
-      if(nowMs>=lInfo&&nowMs<lLead)return{cls:"ev-indigo",icon:"🌙",label:lx?"כיבוי אורות · הארכה":"כיבוי אורות",value:"בשעה "+lo,sub:lx?"הוארך ב-"+lx+" דק׳ לקו״ש":"",urgent:false};
+      if(nowMs>=lInfo&&nowMs<lLead)return{cls:"ev-indigo",icon:"🌙",label:lx?"כיבוי אורות · הארכה":"כיבוי אורות",value:"בשעה "+lo,sub:lx?"הוארך ב-"+lx+" דק׳ - לקו״ש":"",urgent:false};
       if(nowMs>=lT&&nowMs<lT+GOODNIGHT_MIN*60000)return{cls:"ev-indigo",icon:"🌙",label:"",value:"לילה טוב",sub:"",urgent:false};}}
     return null;
   }
