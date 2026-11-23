@@ -367,7 +367,6 @@
   </div>
   <div class="mediashow" id="mediaShow"><div class="m-stage" id="mediaStage"></div><div class="m-clock" id="mediaClock"></div></div>
   <div class="broadcast-show" id="bcShow"><div class="m-stage" id="bcStage"></div><div class="m-clock" id="bcClock"></div></div>
-  <div id="fsPrompt" hidden style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);cursor:pointer;"><div style="background:#111a;border:2px solid rgba(255,255,255,.35);border-radius:28px;padding:1.2em 2em;font-size:clamp(28px,3.4vw,64px);font-weight:700;color:#fff;text-align:center;">⛶ לחצו כאן פעם אחת<br><span style="font-size:.6em;font-weight:500;opacity:.85">כדי להכניס את המסך למסך מלא</span></div></div>
   <button class="fsbtn" id="fsBtn" type="button" hidden><span id="fsIco">⛶</span><span id="fsLabel">מסך מלא</span></button>
 </main>
 
@@ -1258,7 +1257,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
   function exitFs(){var f=document.exitFullscreen||document.webkitExitFullscreen;if(!f)return;try{f.call(document);}catch(e){}}
   function isFullNow(){if(fsElement())return true;try{return window.innerHeight>=screen.height-8&&window.innerWidth>=screen.width-8;}catch(e){return false;}}
   /* בקשת "מסך מלא" מדף הניהול. דפדפן לא מרשה לדף להיכנס למסך מלא בלי לחיצה על המסך,
-     לכן במחשב עם השרת המקומי השרת לוחץ F11 בשבילנו; ובלי השרת — מוצגת הודעה "לחצו כאן". */
+     לכן במחשב עם השרת המקומי השרת לוחץ F11 בשבילנו. */
   function handleFsReq(){
     if(mode!=="display"||isPreview)return;var r=+config.fsReq||0;if(!r)return;
     var done=0;try{done=+localStorage.getItem("board_fsdone")||0;}catch(e){}
@@ -1266,12 +1265,7 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
     if(Math.abs(nowSync()-r)>10*60000||isFullNow())return;
     reqFs(document.documentElement);
     if(window.LUACH_LOCAL)fetch("/api/fullscreen",{method:"POST"}).catch(function(){});
-    setTimeout(function(){if(!isFullNow())showFsPrompt();},4000);
   }
-  function showFsPrompt(){var o=$("fsPrompt");if(!o)return;o.hidden=false;var until=Date.now()+10*60000;
-    var close=function(){o.hidden=true;clearInterval(iv);};
-    o.onclick=function(){reqFs(document.documentElement);close();};
-    var iv=setInterval(function(){if(isFullNow()||Date.now()>until)close();},1000);}
   function setupDisplay(){
     var disp=$("display"),fsBtn=$("fsBtn"),fsLabel=$("fsLabel"),fsIco=$("fsIco"),el=document.documentElement;
     var scEl2=$("screenOff");if(scEl2)scEl2.addEventListener("click",function(){wakeUntil=nowSync()+120000;scEl2.classList.remove("on");});
