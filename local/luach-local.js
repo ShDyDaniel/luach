@@ -7,6 +7,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execFile } = require('child_process');
 
 const PORT = Number(process.env.LUACH_PORT) || 8770;
 const ROOT = path.resolve(__dirname, '..');
@@ -101,7 +102,7 @@ const server = http.createServer(async (req, res) => {
       send(res, 'cloud', cloud);
       clients.add(res);
       const ping = setInterval(() => res.write(': ping\n\n'), 15000);
-      req.on('close', () => { clearInterval(ping); clients.delete(res); });
+      res.on('close', () => { clearInterval(ping); clients.delete(res); });
       return;
     }
     const m = pathname.match(/^\/api\/board\/(config|msgs|media)$/);
@@ -111,12 +112,18 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { applied: apply(m[1], value, false) });
     }
     if (pathname === '/api/status' && req.method === 'POST') {
-      state.status = { online: true, ts: Date.now() };
+      const body = await readBody(req).catch(() => ({}));
+      state.status = { online: true, ts: Date.now(), fs: !!(body && body.fs) };
       dirty.add('status');
       broadcast('status', state.status);
       return json(res, 200, { ok: true });
     }
-    if (pathname === '/api/info') return json(res, 200, { cloud, addresses: lanAddresses(), port: PORT });
+    if (pathname === '/api/fullscreen' && req.method === 'POST') {
+      // רק הדף שרץ על המחשב עצמו יכול לבקש — לא אייפון/מכשיר אחר ברשת.
+      if (!isLoopback(req.socket.remoteAddress)) return json(res, 403, {});
+      return pressF11((result) => json(res, 200, { result }));
+    }
+    if (pathname === '/api/info') return json(res, 200, { cloud, addresses: lanAddresses(), port: PORT, clients: clients.size });
     if (pathname.startsWith('/api/')) return json(res, 404, {});
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, {});
     return serveFile(req, res, pathname);
@@ -124,6 +131,50 @@ const server = http.createServer(async (req, res) => {
     return json(res, 400, { error: String(e.message || e) });
   }
 });
+
+// ---------- מסך מלא: לוחץ F11 בחלון הדפדפן של הלוח (Windows בלבד) ----------
+const isLoopback = (a) => a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
+const PAGE_TITLE = (() => {
+  const m = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/<title>([^<]+)<\/title>/);
+  return m ? m[1].trim() : '';
+})();
+let f11Busy = false;
+function pressF11(done) {
+  if (process.platform !== 'win32') return done('unsupported');
+  if (f11Busy) return done('busy');
+  f11Busy = true;
+  const title = PAGE_TITLE.replace(/'/g, "''");
+  // מוצאים את חלון Chrome/Edge שהכותרת שלו היא כותרת הלוח, מביאים אותו לקדמה,
+  // ולוחצים F11 רק אם הוא באמת החלון הפעיל (כדי שהמקש לא ייפול בחלון אחר).
+  const ps = `
+Add-Type @'
+using System; using System.Runtime.InteropServices;
+public class LuachWin {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+}
+'@
+$p = Get-Process chrome, msedge -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
+if (-not $p) { 'notfound'; exit }
+$h = $p.MainWindowHandle
+if ([LuachWin]::IsIconic($h)) { [void][LuachWin]::ShowWindow($h, 9) }
+$ws = New-Object -ComObject WScript.Shell
+[void]$ws.AppActivate($p.Id); [void][LuachWin]::SetForegroundWindow($h)
+Start-Sleep -Milliseconds 400
+if ([LuachWin]::GetForegroundWindow() -ne $h) { 'nofocus'; exit }
+$ws.SendKeys('{F11}'); 'ok'
+`;
+  const enc = Buffer.from(ps, 'utf16le').toString('base64');
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', enc],
+    { timeout: 15000, windowsHide: true }, (err, stdout) => {
+      f11Busy = false;
+      const result = err ? 'error' : String(stdout).trim().split(/\r?\n/).pop() || 'error';
+      console.log(`Fullscreen request: ${result}`);
+      done(result);
+    });
+}
 
 // ---------- Firebase sync (REST) ----------
 async function fb(method, p, body) {
