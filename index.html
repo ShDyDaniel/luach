@@ -498,6 +498,7 @@
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(255,59,48,.16)">📅</span><span>לוח אירועים חב״די</span></div><div class="c-group"><div id="upcoming" style="padding:14px 16px"></div></div></div>
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(52,199,89,.16)">💻</span><span>מחשב המסך · עבודה בלי אינטרנט</span></div><div class="c-group">
           <a class="c-row tap" href="local/luach-setup.bat" download="luach-setup.bat" style="text-decoration:none;color:inherit;"><span class="lbl">⬇ התקנה במחשב המסך<small>פותחים את הדף הזה במחשב של המסך, מורידים, לוחצים פעמיים ומאשרים "כן". צריך אינטרנט רק בזמן ההתקנה.</small></span><span class="chev">↓</span></a>
+          <a class="c-row tap" href="screen/LuachScreen.zip" download="LuachScreen.zip" style="text-decoration:none;color:inherit;"><span class="lbl">⬇ תוכנת מסך מלא בלבד<small>בלי התקנה: מחלצים את התיקייה ופותחים את LuachScreen.exe. הלוח תמיד במסך מלא, בלי שוליים. סגירה: Ctrl+Shift+Q. (ההתקנה למעלה כבר כוללת אותה.)</small></span><span class="chev">↓</span></a>
           <div class="c-row" id="lanRow" hidden><span class="lbl">כתובת לאייפון<small>מחברים את האייפון ל-Wi-Fi של המחשב ופותחים בספארי:</small><small id="lanAddr" dir="ltr" style="text-align:left;user-select:all;color:var(--c-text);font-weight:600"></small></span></div>
         </div></div>
         <div class="c-section"><div class="c-hdr"><span class="hi" style="background:rgba(0,122,255,.16)">ℹ️</span><span>אודות</span></div>
@@ -1269,7 +1270,8 @@ var MEDIA_UPLOAD = { cloud: "bzj0zmgh", preset: "luach-board" };
   function setupDisplay(){
     var disp=$("display"),fsBtn=$("fsBtn"),fsLabel=$("fsLabel"),fsIco=$("fsIco"),el=document.documentElement;
     var scEl2=$("screenOff");if(scEl2)scEl2.addEventListener("click",function(){wakeUntil=nowSync()+120000;scEl2.classList.remove("on");});
-    if(!isPreview&&(el.requestFullscreen||el.webkitRequestFullscreen)){fsBtn.hidden=false;
+    /* בתוך תוכנת "לוח הקומה" (LuachScreen) החלון תמיד במסך מלא — אין צורך בכפתור */
+    if(!isPreview&&!/LuachScreen\//.test(navigator.userAgent)&&(el.requestFullscreen||el.webkitRequestFullscreen)){fsBtn.hidden=false;
       fsBtn.addEventListener("click",function(){if(fsElement())exitFs();else reqFs(el);});
       function upd(){var on=!!fsElement();fsLabel.textContent=on?"יציאה ממסך מלא":"מסך מלא";fsIco.textContent=on?"✕":"⛶";}
       document.addEventListener("fullscreenchange",upd);document.addEventListener("webkitfullscreenchange",upd);upd();

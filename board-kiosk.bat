@@ -11,6 +11,8 @@ if exist "%DIR%\app\local\luach-local.js" (
   set "NETHOST=127.0.0.1"
   set "NETPORT=8770"
 )
+rem תוכנת המסך המלא (LuachScreen) מותקנת? משתמשים בה במקום Chrome — היא לא יכולה לצאת ממסך מלא
+set "SCREEN=%DIR%\app\screen\LuachScreen.exe"
 set "PROFILE=%DIR%\chrome-profile"
 set "FLAGS=--kiosk --start-fullscreen --user-data-dir=%PROFILE% --no-first-run --no-default-browser-check --disable-infobars --disable-session-crashed-bubble --hide-crash-restore-bubble --disable-features=TranslateUI --autoplay-policy=no-user-gesture-required --overscroll-history-navigation=0 --noerrdialogs --disable-pinch --disable-component-update --check-for-update-interval=604800 --disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows"
 
@@ -37,6 +39,7 @@ timeout /t 4 /nobreak >nul
 
 :loop
 if exist "%DIR%\STOP.flag" goto end
+if exist "%SCREEN%" goto screenapp
 rem ALIVE = כמה תהליכי chrome עם חלון גלוי (0 = הקיוסק נעלם/קרס, גם אם נשאר תהליך רפאים)
 set "ALIVE=1"
 for /f %%i in ('powershell -NoProfile -Command "@(Get-Process chrome -ErrorAction SilentlyContinue ^| Where-Object {$_.MainWindowHandle -ne 0}).Count"') do set "ALIVE=%%i"
@@ -50,5 +53,11 @@ if not defined CHROME start "" "%URL%"
 :wait
 timeout /t 12 /nobreak >nul
 goto loop
+
+:screenapp
+rem התוכנה לא רצה (נסגרה/קרסה)? פותחים אותה שוב
+tasklist /fi "imagename eq LuachScreen.exe" 2>nul | find /i "LuachScreen.exe" >nul
+if errorlevel 1 start "" "%SCREEN%" "%URL%"
+goto wait
 
 :end
